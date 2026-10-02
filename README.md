@@ -3,12 +3,12 @@
 A small extension for **Pi 1.x and current llama.cpp**. Keeps Pi's existing provider, model picker, tool calling, and response parser. Adds one bottom status row, structured telemetry, and conservative discovery of the loaded model's thinking controls. No additional runtime dependencies, custom provider, proxy, or Pi fork.
 
 ```text
-llama.cpp · loading 50% · text model · total 8.2s
-llama.cpp · prefill 60% 600/1000 (200 cached) 200.0 tok/s · total 12.0s
-llama.cpp · prefill 100% 1000/1000 (200 cached) 200.0 tok/s · decode 20.0 tok/s (80 tokens) · total 16.0s
+loading 50% · text model · 0:08
+↑ 60% 600/1000 (200 ch) 200.0 tk/s · 0:12
+↑ 100% 1000/1000 (200 ch) 200.0 tk/s · ↓ 20.0 tk/s (80 tk) · 0:16
 ```
 
-The row uses Pi's theme `dim` color, matching the native footer. Pi truncates its status row to the terminal width. RPC/SDK snapshots remain plain text and always contain the full values.
+The row uses Pi's theme `dim` color, matching the native footer. It uses Pi's native widget below the editor, just above the standard footer, and wraps onto as many lines as needed when the terminal is narrow. Resizing reflows it automatically. `↑` means prefill, `↓` means decode, `ch` means cached tokens, and elapsed time is minutes:seconds. RPC/SDK snapshots remain plain text and always contain the full values; structured measurements keep their original field names and millisecond precision.
 
 ## Install
 

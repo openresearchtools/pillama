@@ -12,15 +12,15 @@ test("prefill counts cached tokens without counting them as newly evaluated toke
   const data = state();
   updateStream(data, { prompt_progress: { total: 1000, processed: 600, cache: 200, time_ms: 2000 } });
   assert.deepEqual(data.prefill, { total: 1000, processed: 600, cached: 200, ms: 2000, tokensPerSecond: 200 });
-  assert.match(formatStatus(data), /prefill 60% 600\/1000 \(200 cached\) 200.0 tok\/s/);
+  assert.match(formatStatus(data), /↑ 60% 600\/1000 \(200 ch\) 200.0 tk\/s/);
   updateStream(data, { timings: { prompt_n: 800, cache_n: 200, prompt_ms: 4000,
     prompt_per_second: 200, predicted_n: 80, predicted_ms: 4000, predicted_per_second: 20 } });
   assert.equal(data.prefill?.total, 1000);
   assert.equal(data.prefill?.processed, 1000);
   assert.equal(data.decode?.tokensPerSecond, 20);
-  assert.match(formatStatus(data), /total 12.0s/);
+  assert.match(formatStatus(data), /↓ 20.0 tk\/s \(80 tk\) · 0:12$/);
   updateStream(data, { prompt_progress: { total: 1000, processed: 999, cache: 200, time_ms: 4000 } });
-  assert.match(formatStatus(data), /prefill 99%/);
+  assert.match(formatStatus(data), /↑ 99%/);
 });
 
 test("zero-time progress and absent/malformed stats never invent speed or tokens", () => {

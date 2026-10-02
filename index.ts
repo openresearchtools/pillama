@@ -25,8 +25,10 @@ export default function pillama(pi: ExtensionAPI, options: { agentDir?: string }
     run.state.elapsedMs = Math.round(now - run.started);
     run.state.text = formatStatus(run.state);
     const snapshot = structuredClone(run.state);
-    run.ctx.ui.setStatus(STATUS_KEY, run.ctx.mode === "tui"
-      ? run.ctx.ui.theme.fg("dim", snapshot.text) : snapshot.text);
+    if (run.ctx.mode === "tui") {
+      // Native footer statuses truncate; Text widgets wrap and reflow on resize.
+      run.ctx.ui.setWidget(STATUS_KEY, [run.ctx.ui.theme.fg("dim", snapshot.text)], { placement: "belowEditor" });
+    } else run.ctx.ui.setStatus(STATUS_KEY, snapshot.text);
     // Native RPC transport: no stdout patches, custom protocol, or transcript messages.
     if (run.ctx.mode === "rpc") run.ctx.ui.setStatus(TELEMETRY_KEY, JSON.stringify(snapshot));
     pi.events.emit(TELEMETRY_KEY, snapshot);
@@ -45,6 +47,7 @@ export default function pillama(pi: ExtensionAPI, options: { agentDir?: string }
     finish("aborted");
     active = undefined;
     ctx.ui.setStatus(STATUS_KEY, undefined);
+    if (ctx.mode === "tui") ctx.ui.setWidget(STATUS_KEY, undefined);
     if (ctx.mode === "rpc") ctx.ui.setStatus(TELEMETRY_KEY, undefined);
     pi.events.emit(TELEMETRY_KEY, null);
   };

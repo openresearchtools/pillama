@@ -63,7 +63,7 @@ export function updateStream(state: Telemetry, data: unknown): void {
 
 export function formatStatus(state: Telemetry): string {
   const rate = (value?: number) => value === undefined ? "—" : value.toFixed(1);
-  const parts = ["llama.cpp"];
+  const parts: string[] = [];
   if (state.phase === "loading") {
     const pct = state.loading?.progress;
     parts.push(`loading ${pct === undefined ? "…" : `${Math.round(pct * 100)}%`}`);
@@ -72,12 +72,13 @@ export function formatStatus(state: Telemetry): string {
   if (state.prefill) {
     const p = state.prefill;
     const percent = p.total > 0 ? ` ${Math.min(100, Math.floor(p.processed / p.total * 100))}%` : "";
-    parts.push(`prefill${percent} ${p.processed}/${p.total} (${p.cached} cached) ${rate(p.tokensPerSecond)} tok/s`);
+    parts.push(`↑${percent} ${p.processed}/${p.total} (${p.cached} ch) ${rate(p.tokensPerSecond)} tk/s`);
   }
   if (state.decode && state.decode.tokens > 0) {
-    parts.push(`decode ${rate(state.decode.tokensPerSecond)} tok/s (${state.decode.tokens} tokens)`);
+    parts.push(`↓ ${rate(state.decode.tokensPerSecond)} tk/s (${state.decode.tokens} tk)`);
   }
-  parts.push(`total ${(state.elapsedMs / 1000).toFixed(1)}s`);
+  const seconds = Math.floor(state.elapsedMs / 1000);
+  parts.push(`${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`);
   if (state.error) parts.push(state.error.replace(/[\x00-\x1f\x7f-\x9f]/g, " ").slice(0, 180));
   return parts.join(" · ");
 }
