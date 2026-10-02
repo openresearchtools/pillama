@@ -22,7 +22,8 @@ export default function pillama(pi: ExtensionAPI): void {
     run.state.elapsedMs = Math.round(now - run.started);
     run.state.text = formatStatus(run.state);
     const snapshot = structuredClone(run.state);
-    run.ctx.ui.setStatus(STATUS_KEY, snapshot.text);
+    run.ctx.ui.setStatus(STATUS_KEY, run.ctx.mode === "tui"
+      ? run.ctx.ui.theme.fg("dim", snapshot.text) : snapshot.text);
     // Native RPC transport: no stdout patches, custom protocol, or transcript messages.
     if (run.ctx.mode === "rpc") run.ctx.ui.setStatus(TELEMETRY_KEY, JSON.stringify(snapshot));
     pi.events.emit(TELEMETRY_KEY, snapshot);

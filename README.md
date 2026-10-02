@@ -8,7 +8,7 @@ llama.cpp · prefill 60% 600/1000 (200 cached) 200.0 tok/s · total 12.0s
 llama.cpp · prefill 100% 1000/1000 (200 cached) 200.0 tok/s · decode 20.0 tok/s (80 tokens) · total 16.0s
 ```
 
-Pi truncates its status row to the terminal width. RPC/SDK snapshots always contain the full values.
+The row uses Pi's theme `dim` color, matching the native footer. Pi truncates its status row to the terminal width. RPC/SDK snapshots remain plain text and always contain the full values.
 
 ## Install
 
