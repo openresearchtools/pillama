@@ -1,0 +1,48 @@
+{
+  "name": "pillama",
+  "version": "0.1.0",
+  "description": "Live llama.cpp loading, prefill and decode telemetry for Pi's TUI, RPC and SDK.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openresearchtools/pillama.git"
+  },
+  "keywords": [
+    "pi-package",
+    "pi",
+    "llama.cpp"
+  ],
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "exports": {
+    ".": "./index.ts",
+    "./telemetry": "./telemetry.ts"
+  },
+  "files": [
+    "index.ts",
+    "telemetry.ts",
+    "router.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "^1.0.0"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "1.0.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "7.0.2"
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts"
+  }
+}
