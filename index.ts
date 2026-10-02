@@ -1,14 +1,17 @@
 import { randomUUID } from "node:crypto";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { prepareModel } from "./router.ts";
+import { thinkingController } from "./thinking.ts";
 import { formatStatus, object, STATUS_KEY, TELEMETRY_KEY, updateStream, type Telemetry } from "./telemetry.ts";
 
 export { readTelemetry, STATUS_KEY, TELEMETRY_KEY, type Telemetry } from "./telemetry.ts";
+export { THINKING_KEY, type Thinking } from "./thinking.ts";
 
-export default function pillama(pi: ExtensionAPI): void {
+export default function pillama(pi: ExtensionAPI, options: { agentDir?: string } = {}): void {
   pi.registerFlag("pillama-provider", {
     description: "llama.cpp provider ID to monitor", type: "string", default: "llama.cpp",
   });
+  const thinking = thinkingController(pi, options.agentDir);
   let active: { state: Telemetry; ctx: ExtensionContext; started: number;
     controller: AbortController; timer?: ReturnType<typeof setInterval>; lastPublish: number;
     finished: boolean; unlink: () => void } | undefined;
@@ -50,7 +53,8 @@ export default function pillama(pi: ExtensionAPI): void {
     const model = ctx.model;
     if (!model || model.provider !== pi.getFlag("pillama-provider") || model.api !== "openai-completions") return;
     finish("aborted");
-    const payload = object(event.payload);
+    const previousThinking = pi.getThinkingLevel();
+    let payload = object(event.payload);
     const controller = new AbortController();
     const abort = () => { if (active?.controller === controller) finish("aborted"); };
     const signal = ctx.signal;
@@ -84,6 +88,10 @@ export default function pillama(pi: ExtensionAPI): void {
           publish();
         },
       });
+      if (!run.finished) {
+        await thinking.refresh(ctx);
+        payload = thinking.payload(payload, ctx, previousThinking);
+      }
       if (!run.finished) { run.state.phase = "waiting"; publish(true); }
     } catch (error) {
       if (active === run && !run.finished) {

@@ -1,6 +1,6 @@
 # pillama
 
-A small extension for **Pi 1.x and current llama.cpp**. Keeps Pi's existing provider, model picker, tool calling, and response parser. Adds one bottom status row and structured telemetry for RPC and SDK clients. No runtime dependencies, custom provider, proxy, or Pi fork.
+A small extension for **Pi 1.x and current llama.cpp**. Keeps Pi's existing provider, model picker, tool calling, and response parser. Adds one bottom status row, structured telemetry, and conservative discovery of the loaded model's thinking controls. No additional runtime dependencies, custom provider, proxy, or Pi fork.
 
 ```text
 llama.cpp · loading 50% · text model · total 8.2s
@@ -45,6 +45,25 @@ Before inference, pillama checks `/models`. For a router model that needs loadin
 Unknown/missing models and load failures appear in the row and structured data and abort inference. With `--no-models-autoload`, pillama respects the server setting and asks you to load through `/llama`. It never downloads missing models. Cancelling stops this client's wait, without unloading a model shared by other clients. Single-model servers skip router loading. Already sleeping models use llama.cpp's normal wake-on-request behavior.
 
 Loading percentages come from the server's load-stage progress, with equal weight per reported stage. Unknown progress stays unknown; percentages are not fabricated. The server notes that mmap can report inaccurate load progress; `--load-mode none` is its option for accurate progress. The extension observes loads needed by an inference request, not unrelated background model loads.
+
+## Thinking discovery
+
+Once the selected router model is loaded, pillama reads its live `/props` template. There are no model-name rules or saved per-model capability files. It recognizes explicit Jinja enum guards that reject unsupported effort values, then verifies the allowed Pi levels through `/apply-template`. For on/off templates it verifies that enabling and disabling thinking produces different prompts. These checks render a tiny test prompt; they do not generate tokens or load another model.
+
+Verified choices appear in Pi's existing `/thinking` picker and its native SDK/RPC thinking APIs. With no explicit preference, pillama selects the highest verified effort, or `medium` (on) for an on/off model. Only the current model object is updated, in memory. A cold model is inspected after loading and before its first inference request. Already loaded models are checked at session/model selection and every five seconds while idle. Template checks are cached in memory and invalidated by template, endpoint, model, or launch-argument changes. No Pi restart or GPU reload is needed to change effort.
+
+Explicit choices take precedence:
+
+- CLI `--thinking`, model suffixes, scoped-model levels, Pi global/per-model thinking settings, and observed manual thinking changes are respected.
+- Explicit thinking-related `models.json` metadata or custom request mappings are left alone. For SDK sessions with a custom agent directory, use `extensionFactories: [pi => pillama(pi, { agentDir })]` so this check reads that directory.
+- Server reasoning/template launch options suppress automatic maximum selection. The request leaves those settings to the server until the user explicitly changes effort in Pi. Existing server token budgets are never replaced. Rendered defaults differing from the template's declared default also suppress automatic selection.
+- Unknown templates, ignored controls, unavailable discovery endpoints, and servers without router launch metadata retain Pi's behavior. In particular, single-model servers currently retain their existing thinking configuration because their API does not expose launch arguments.
+
+Pi only reports thinking changes when the effective level changes. It cannot tell an extension that a client reselected the same value, or recover a requested SDK/RPC level already clamped before discovery. Set `defaultThinkingLevel` in Pi settings when a preference must apply before an unloaded model has been inspected. `--pillama-thinking off` disables discovery and automatic selection entirely while keeping telemetry.
+
+Effort is sent as a template parameter, **not a reasoning token budget**. Pi's generic picker descriptions such as “~8k tokens” remain Pi's labels; pillama does not impose those limits. The native level names stay unchanged (there are no additional `pl-*` controls).
+
+`get_available_thinking_levels`, `set_thinking_level`, `get_state`, and the corresponding SDK session methods operate on the updated current model. Additional discovery details are published on the SDK event bus as `pillama:thinking` and over RPC as `setStatus` with that key and a JSON `Thinking` object (`provider`, `model`, `levels`, `selected`, `source`, `templateHash`). Like `pillama:telemetry`, this reserved status key is data, not an extra visible row. `source` identifies automatic selection, a user choice, or deference to server defaults. No reasoning data or test prompts are added to the conversation.
 
 ## Measurements
 
@@ -130,5 +149,7 @@ npm test
 Tests include actual Pi 1.0.0 RPC processes and a headless SDK session against local synthetic servers. The RPC test uses a 700 ms idle timeout, a 1.8-second model load, and a 2.1-second prefill gap bridged by SSE comments. It verifies load progress, cached-token accounting, tool continuations, cancellation, failures, and clean conversation/RPC output. No real model, GPU, or external API is used by tests.
 
 Hardware validation on 2 October 2026 also passed with Pi 1.0.0, llama.cpp `b11146-7fe450e19`, an RTX 3090, and Qwen3.8-27B-UD-Q4_K_XL. RPC reported real loading percentages through 100%, a 22-second cold load despite Pi's 20-second HTTP timeout, 3,211 prompt tokens at about 1,016 tok/s, and 3,212 cached tokens reused on the next request. Both responses carried generation speed and total elapsed time (25.3 s cold / 0.6 s cached). These were short correctness checks, not generation-speed benchmarks.
+
+Thinking discovery was also checked against that real model with its full 262,144-token context across two RTX 3090s. Native SDK and RPC exposed `off`, `low`, `medium`, `xhigh`, selected `xhigh` automatically, and honored manual level changes without reloading the GPU model. Real requests at `xhigh`, `low`, and `off` all completed; no thinking-budget field was sent.
 
 Upstream contracts: [Pi extensions](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/extensions.md), [Pi RPC](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/rpc.md), [llama.cpp server](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md).

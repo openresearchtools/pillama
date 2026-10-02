@@ -1,6 +1,6 @@
 {
   "name": "pillama",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Live llama.cpp loading, prefill and decode telemetry for Pi's TUI, RPC and SDK.",
   "type": "module",
   "license": "MIT",
@@ -26,6 +26,7 @@
     "index.ts",
     "telemetry.ts",
     "router.ts",
+    "thinking.ts",
     "README.md",
     "LICENSE"
   ],
