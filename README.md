@@ -99,6 +99,7 @@ Explicit choices take precedence:
 
 - CLI `--thinking`, model suffixes, scoped-model levels, Pi global/per-model thinking settings, and observed manual thinking changes are respected.
 - Explicit thinking-related `models.json` metadata or custom request mappings are left alone. For SDK sessions with a custom agent directory, use `extensionFactories: [pi => pillama(pi, { agentDir })]` so this check reads that directory.
+- A host that generates `models.json` providers may supply `isGeneratedProvider(providerId, definition)`. Return `true` only when the complete definition exactly matches the host's saved ownership record; otherwise return `false`. This lets an unloaded model's provisional capabilities be discovered after loading while preserving independently edited metadata. The callback is read-only; a thrown error prevents discovery.
 - Server reasoning/template launch options suppress automatic maximum selection. The request leaves those settings to the server until the user explicitly changes effort in Pi. Existing server token budgets are never replaced. Rendered defaults differing from the template's declared default also suppress automatic selection.
 - Unknown templates, ignored controls, unavailable discovery endpoints, and servers without router launch metadata retain Pi's behavior. In particular, single-model servers currently retain their existing thinking configuration because their API does not expose launch arguments.
 

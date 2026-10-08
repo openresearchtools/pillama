@@ -1,19 +1,19 @@
 import { randomUUID } from "node:crypto";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { prepareModel } from "./router.ts";
-import { thinkingController } from "./thinking.ts";
+import { thinkingController, type GeneratedProvider } from "./thinking.ts";
 import { resumeController } from "./resume.ts";
 import { formatStatus, object, STATUS_KEY, TELEMETRY_KEY, updateStream, type Telemetry } from "./telemetry.ts";
 
 export { readTelemetry, STATUS_KEY, TELEMETRY_KEY, type Telemetry } from "./telemetry.ts";
 export { THINKING_KEY, type Thinking } from "./thinking.ts";
 
-export default function pillama(pi: ExtensionAPI, options: { agentDir?: string } = {}): void {
+export default function pillama(pi: ExtensionAPI, options: { agentDir?: string; isGeneratedProvider?: GeneratedProvider } = {}): void {
   pi.registerFlag("pillama-provider", {
     description: "llama.cpp provider ID to monitor", type: "string", default: "llama.cpp",
   });
   resumeController(pi, options.agentDir);
-  const thinking = thinkingController(pi, options.agentDir);
+  const thinking = thinkingController(pi, options.agentDir, options.isGeneratedProvider);
   let active: { state: Telemetry; ctx: ExtensionContext; started: number;
     controller: AbortController; timer?: ReturnType<typeof setInterval>; lastPublish: number;
     finished: boolean; unlink: () => void } | undefined;

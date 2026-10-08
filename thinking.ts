@@ -10,6 +10,7 @@ const levels = ["off", "minimal", "low", "medium", "high", "xhigh", "max"] as co
 type Level = typeof levels[number];
 type Model = NonNullable<ExtensionContext["model"]>;
 type Json = Record<string, unknown>;
+export type GeneratedProvider = (provider: string, definition: Readonly<Json>) => boolean | Promise<boolean>;
 export const THINKING_KEY = "pillama:thinking";
 export interface Thinking {
   provider: string; model: string; levels: Level[]; selected: Level;
@@ -90,7 +91,7 @@ function cliLevel(): Level | undefined {
 }
 
 /** Session-only discovery and model metadata. No provider replacement or models.json writes. */
-export function thinkingController(pi: ExtensionAPI, agentDir = getAgentDir()) {
+export function thinkingController(pi: ExtensionAPI, agentDir = getAgentDir(), isGeneratedProvider?: GeneratedProvider) {
   pi.registerFlag("pillama-thinking", { type: "string", default: "auto", description: "Discover llama.cpp thinking at load time (auto or off)" });
   let life = new AbortController(), timer: ReturnType<typeof setInterval> | undefined;
   let context: ExtensionContext | undefined, pending: Promise<void> | undefined, applying = false;
@@ -124,6 +125,12 @@ export function thinkingController(pi: ExtensionAPI, agentDir = getAgentDir()) {
     try {
       const config = object(JSON.parse(await readFile(join(agentDir, "models.json"), "utf8")));
       const provider = object(object(config.providers)[model.provider]);
+      // Hosts may identify an unchanged generated definition using their own
+      // ownership record. A missing/failed proof keeps explicit metadata intact.
+      if (isGeneratedProvider) {
+        try { if (await isGeneratedProvider(model.provider, provider) === true) return false; }
+        catch { return true; }
+      }
       const override = object(object(provider.modelOverrides)[model.id]);
       const definition = Array.isArray(provider.models) ? provider.models.map(object).find(m => m.id === model.id) : undefined;
       return [provider, override, definition].some(raw => raw && Object.keys(raw).some(k =>
