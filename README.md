@@ -1,6 +1,6 @@
 # pillama
 
-A small extension for **Pi 1.x and current llama.cpp**. Keeps Pi's existing provider, model picker, tool calling, and response parser. Adds one bottom status row, structured telemetry, and conservative discovery of the loaded model's thinking controls. No additional runtime dependencies, custom provider, proxy, or Pi fork.
+A small extension for **Pi 1.x and current llama.cpp**. Keeps Pi's existing provider, model picker, tool calling, and response parser. Adds one bottom status row, structured telemetry, and conservative discovery of the loaded model's thinking controls. No additional runtime dependencies, external service, proxy, or Pi fork.
 
 ```text
 loading 50% · text model · 0:08
@@ -45,6 +45,49 @@ Before inference, pillama checks `/models`. For a router model that needs loadin
 Unknown/missing models and load failures appear in the row and structured data and abort inference. With `--no-models-autoload`, pillama respects the server setting and asks you to load through `/llama`. It never downloads missing models. Cancelling stops this client's wait, without unloading a model shared by other clients. Single-model servers skip router loading. Already sleeping models use llama.cpp's normal wake-on-request behavior.
 
 Loading percentages come from the server's load-stage progress, with equal weight per reported stage. Unknown progress stays unknown; percentages are not fabricated. The server notes that mmap can report inaccurate load progress; `--load-mode none` is its option for accurate progress. The extension observes loads needed by an inference request, not unrelated background model loads.
+
+## Recovering a dropped response
+
+Recovery is opt-in and works with llama.cpp's resumable SSE API:
+
+```text
+/pillama-resume on 3
+/pillama-resume status
+/pillama-resume off
+```
+
+The default is off; `on` without a number retains the current retry count (initially
+three). Settings live in `pillama.json` under Pi's agent directory:
+
+```json
+{ "resume": { "enabled": true, "attempts": 3 } }
+```
+
+With recovery enabled, every generation gets a new `X-Conversation-Id`. On a broken
+socket, premature EOF or response-header timeout, Pillama requests
+`GET /v1/stream?conv_id=ID&from=BYTES` through the same fetch transport, endpoint and
+authentication. `BYTES` counts original UTF-8 response bytes, including heartbeat
+comments and partial SSE frames. Replayed bytes go into Pi's existing parser, so
+partial text, thinking and tool-call arguments are not appended twice. The native
+provider's login, model catalog, refresh and classifier remain intact.
+
+Pillama tries the configured number of resumes before reporting a retryable error.
+Pi then applies its own normal fresh-request retry setting and removes the failed
+partial assistant response before retrying. If Pi auto-retry is disabled, the error
+stays visible. A new generation is never spliced into a partial old stream. HTTP
+401/403 remains an authentication failure rather than a disguised connection drop.
+The original header timeout is applied separately to each attempt; the SDK's outer
+budget allows these attempts and their bounded backoff to finish. Explicit Stop
+cancels locally immediately and makes a best-effort authenticated
+`DELETE /v1/stream?conv_id=ID` to stop the remote producer.
+
+This requires an upstream version implementing the
+[resumable stream endpoints](https://github.com/ggml-org/llama.cpp/blob/c811cb8f0ac91b8ac72a32f970bdd45037f20da7/tools/server/server-stream.cpp)
+and corresponding router forwarding. In that version, completed sessions are kept
+for five minutes with a 4 MiB ring buffer. An expired generation or an evicted byte
+offset cannot be restored; resume attempts exhaust before Pi may start afresh.
+This ID identifies the in-flight generation, not permanent conversation history.
+Transport, authentication and TLS/Tor routing are never changed during recovery.
 
 ## Thinking discovery
 

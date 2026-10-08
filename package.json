@@ -1,6 +1,6 @@
 {
   "name": "pillama",
-  "version": "0.2.1",
+  "version": "0.4.0",
   "description": "Live llama.cpp loading, prefill and decode telemetry for Pi's TUI, RPC and SDK.",
   "type": "module",
   "license": "MIT",
@@ -28,16 +28,19 @@
     "router.ts",
     "thinking.ts",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "resume.ts"
   ],
   "engines": {
     "node": ">=22.18.0"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "^1.0.0"
+    "@earendil-works/pi-ai": "^1.0.2",
+    "@earendil-works/pi-coding-agent": "^1.0.2"
   },
   "devDependencies": {
-    "@earendil-works/pi-coding-agent": "1.0.0",
+    "@earendil-works/pi-ai": "1.0.2",
+    "@earendil-works/pi-coding-agent": "1.0.2",
     "@types/node": "^22.0.0",
     "tsx": "^4.23.15",
     "typescript": "7.0.2"
