@@ -66,8 +66,10 @@ three). Settings live in `pillama.json` under Pi's agent directory:
 With recovery enabled, every generation gets a new `X-Conversation-Id`. On a broken
 socket, premature EOF or response-header timeout, Pillama requests
 `GET /v1/stream?conv_id=ID&from=BYTES` through the same fetch transport, endpoint and
-authentication. `BYTES` counts original UTF-8 response bytes, including heartbeat
-comments and partial SSE frames. Replayed bytes go into Pi's existing parser, so
+authentication. Both `/chat/completions` and `/v1/chat/completions` use that versioned
+replay route, preserving any reverse-proxy path prefix. `BYTES` counts original
+UTF-8 response bytes, including heartbeat comments and partial SSE frames.
+Replayed bytes go into Pi's existing parser, so
 partial text, thinking and tool-call arguments are not appended twice. The native
 provider's login, model catalog, refresh and classifier remain intact.
 
@@ -82,8 +84,9 @@ cancels locally immediately and makes a best-effort authenticated
 `DELETE /v1/stream?conv_id=ID` to stop the remote producer.
 
 This requires an upstream version implementing the
-[resumable stream endpoints](https://github.com/ggml-org/llama.cpp/blob/c811cb8f0ac91b8ac72a32f970bdd45037f20da7/tools/server/server-stream.cpp)
-and corresponding router forwarding. In that version, completed sessions are kept
+[resumable stream endpoints](https://github.com/ggml-org/llama.cpp/blob/d81235049384534c167caea52b85a694f6103d14/tools/server/server-stream.cpp)
+and corresponding router forwarding, as shipped in official llama.cpp v0.6.0.
+In that release, completed sessions are kept
 for five minutes with a 4 MiB ring buffer. An expired generation or an evicted byte
 offset cannot be restored; resume attempts exhaust before Pi may start afresh.
 This ID identifies the in-flight generation, not permanent conversation history.

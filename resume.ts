@@ -44,7 +44,9 @@ export function resumableFetch(fetcher: FetchFunction, model: string, attempts: 
     headers.set("X-Conversation-Id", conversation);
     headers.set("Accept-Encoding", "identity");
     const endpoint = new URL(url);
-    endpoint.pathname = endpoint.pathname.replace(/\/chat\/completions$/, "/stream");
+    // Chat accepts an unversioned alias, but replay and Stop require /v1.
+    // Keep any reverse-proxy prefix before that optional API version.
+    endpoint.pathname = endpoint.pathname.replace(/\/(?:v1\/)?chat\/completions$/, "/v1/stream");
     endpoint.search = new URLSearchParams({ conv_id: conversation }).toString();
     const replayHeaders = new Headers(headers);
     for (const name of ["content-type", "content-length", "x-conversation-id"]) replayHeaders.delete(name);
